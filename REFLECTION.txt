@@ -1,0 +1,10 @@
+Well, the codes are similar but not the same. 
+One thing I noticed tho is that I feel like Paul’s null test showed me a gap in my testing; 
+I only tested an instance override, while Paul tested a subclass override. 
+I think adding his case would make my tests more complete. 
+Another big thing I felt in this assignment was that I found check_types the most daunting one; 
+because it has to check both the current depression and the expressions inside it. 
+Luckily the hints helped me realize that a method call only needs to check the receivers; orders matter too. 
+For academic integrity, I want to be upfront that I use google to search up and understand the code. 
+I did not use copilots; it took me the whole day to work on this (well not the whole day, but today I was so dedicated to finishing this) 
+but in the end it worked. Overall, for the next homework, I should start earlier so I can ask questions and get everything done easily.
