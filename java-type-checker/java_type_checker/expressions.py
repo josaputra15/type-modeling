@@ -38,7 +38,13 @@ class JavaVariable(JavaExpression):
     def __init__(self, name, declared_type):
         self.name = name                    #: The name of the variable (str)
         self.declared_type = declared_type  #: The declared type of the variable (JavaType)
+    
+    def static_type(self):
+        return self.declared_type
 
+    def check_types(self):
+        return
+    
 
 class JavaLiteral(JavaExpression):
     """A literal value entered in the code, e.g. `5` in the expression `x + 5`.
@@ -47,6 +53,11 @@ class JavaLiteral(JavaExpression):
         self.value = value  #: The literal value, as a string
         self.type = type    #: The type of the literal (JavaType)
 
+    def static_type(self):
+        return self.type
+    
+    def check_types(self):
+        return
 
 class JavaNullLiteral(JavaLiteral):
     """The literal value `null` in Java code.
@@ -65,6 +76,25 @@ class JavaAssignment(JavaExpression):
     def __init__(self, lhs, rhs):
         self.lhs = lhs
         self.rhs = rhs
+    
+    def static_type(self):
+        return self.lhs.static_type()
+    
+    def check_types(self):
+        self.lhs.check_types()
+        self.rhs.check_types()
+
+        left_type = self.lhs.static_type()
+        right_type = self.rhs.static_type()
+
+        if right_type.is_subtype_of(left_type) == True:
+            return
+        else:
+            raise JavaTypeMismatchError(
+                f"Cannot assign {right_type.name} to variable {self.lhs.name} of type {left_type.name}"
+                )
+
+
 
 
 class JavaMethodCall(JavaExpression):
@@ -87,6 +117,54 @@ class JavaMethodCall(JavaExpression):
         self.receiver = receiver
         self.method_name = method_name
         self.args = args
+
+    def static_type(self):
+        receiver_type = self.receiver.static_type()
+        method = receiver_type.method_named(self.method_name)
+        return method.return_type
+
+
+
+
+# This below is truly pain. this was the daunting part because this guy right here checks the expression in front of me, 
+# and it also has to check every expression nested inside it. 
+#I kept wanting one method to understand the whole tree. Thanks to the hint that helped me: method call's children are only the receiver and the arguments,
+# and I should call check_types on those and trust them to check themselves.
+
+
+    def check_types(self):
+        self.receiver.check_types()
+
+        for arg in self.args:
+            arg.check_types()
+
+        receiver_type = self.receiver.static_type()
+        method = receiver_type.method_named(self.method_name)
+
+        expected_count = len(method.parameter_types)
+        actual_count = len(self.args)
+
+        if actual_count == expected_count:
+            index = 0
+            for arg in self.args:
+                expected_type = method.parameter_types[index]
+                actual_type = arg.static_type()
+
+                if actual_type.is_subtype_of(expected_type) == True:
+                    index = index + 1
+                else:
+                    actual_types = []
+                    for one_arg in self.args:
+                        actual_types.append(one_arg.static_type())
+
+                    expected_text = _names(method.parameter_types)
+                    actual_text = _names(actual_types)
+
+                    raise JavaTypeMismatchError(
+                        f"{receiver_type.name}.{self.method_name}() expects arguments of type {expected_text}, but got {actual_text}")
+        else:
+            raise JavaArgumentCountError(
+                 f"Wrong number of arguments for {receiver_type.name}.{self.method_name}(): expected {expected_count}, got {actual_count}")
 
 
 class JavaConstructorCall(JavaExpression):
